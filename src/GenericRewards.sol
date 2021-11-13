@@ -7,9 +7,11 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./RewardDistributionRecipient.sol";
 import "./LPTokenWrapper.sol";
 
-abstract contract GenericRewards is LPTokenWrapper, RewardDistributionRecipient {
+contract GenericRewards is LPTokenWrapper, RewardDistributionRecipient {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+
+    address internal immutable rewardTokenContract;
 
     uint256 public periodFinish;
     uint256 public rewardRate;
@@ -32,6 +34,10 @@ abstract contract GenericRewards is LPTokenWrapper, RewardDistributionRecipient 
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
         }
         _;
+    }
+
+    constructor(address _tokenContract, address _rewardTokenContract) LPTokenWrapper(_tokenContract) {
+        rewardTokenContract = _rewardTokenContract;
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
@@ -72,13 +78,11 @@ abstract contract GenericRewards is LPTokenWrapper, RewardDistributionRecipient 
         emit Withdrawn(msg.sender, amount);
     }
 
-    function getRewardTokenContract() internal pure virtual returns (address);
-
     function getReward() public updateReward(msg.sender) {
         uint256 reward = earned(msg.sender);
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            IERC20(getRewardTokenContract()).safeTransfer(msg.sender, reward);
+            IERC20(rewardTokenContract).safeTransfer(msg.sender, reward);
 
             emit RewardPaid(msg.sender, reward);
         }
